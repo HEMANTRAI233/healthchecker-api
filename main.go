@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
+	
 	"healthchecker-api/internal/config"
 	"healthchecker-api/internal/database"
 	"healthchecker-api/internal/routes"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,7 +17,13 @@ func main() {
 	if err != nil {
 	log.Fatal(err)
 	}
+	
 	fmt.Println("PostgreSQL Connected")
+	err = database.RunMigrations()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	router := gin.Default()
 	routes.RegisterRoutes(router)
 	fmt.Println("Server Running On Port:", config.AppConfig.AppPort)

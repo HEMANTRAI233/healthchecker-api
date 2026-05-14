@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS application_users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
