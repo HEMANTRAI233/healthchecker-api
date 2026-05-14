@@ -1,7 +1,12 @@
 .env
 bin/
-dist/
+/dist/
 tmp/
 build/
 coverage.out
 *.exe
+
+# ui/dist/ is populated at build time by the CI pipeline.
+# Track only the placeholder so the Go embed directive compiles locally.
+ui/dist/*
+!ui/dist/index.html
