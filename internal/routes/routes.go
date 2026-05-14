@@ -28,13 +28,12 @@ func RegisterRoutes(router *gin.Engine) {
 	fileServer := http.FileServer(http.FS(distFS))
 
 	router.NoRoute(func(c *gin.Context) {
-		// Try to open the requested file; fall back to index.html for SPA routing.
+		// Use fs.Stat to check file existence without opening a handle twice.
 		reqPath := strings.TrimPrefix(c.Request.URL.Path, "/")
 		if reqPath == "" {
 			reqPath = "index.html"
 		}
-		if f, err := distFS.Open(reqPath); err == nil {
-			f.Close()
+		if _, err := fs.Stat(distFS, reqPath); err == nil {
 			fileServer.ServeHTTP(c.Writer, c.Request)
 			return
 		}

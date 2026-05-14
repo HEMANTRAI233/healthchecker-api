@@ -13,6 +13,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # required to create releases and download release assets
 
     steps:
       - name: Checkout repository

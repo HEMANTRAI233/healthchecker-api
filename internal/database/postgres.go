@@ -3,16 +3,23 @@ package database
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"healthchecker-api/internal/config"
 )
+
+var dbNameRe = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]{0,62}$`)
 
 var DB *pgxpool.Pool
 
 // ConnectPostgres connects to PostgreSQL, creating the target database if it does not exist.
 func ConnectPostgres() error {
 	cfg := config.AppConfig
+
+	if !dbNameRe.MatchString(cfg.DBName) {
+		return fmt.Errorf("invalid DB_NAME %q: must start with a letter and contain only letters, digits, or underscores (max 63 chars)", cfg.DBName)
+	}
 
 	// First connect to the default "postgres" maintenance database to bootstrap the target DB.
 	maintenanceDSN := fmt.Sprintf(
@@ -36,9 +43,10 @@ func ConnectPostgres() error {
 		return fmt.Errorf("failed to check database existence: %w", err)
 	}
 	if !exists {
+		// cfg.DBName is validated above; quoting it with %q is safe.
 		_, err = mainPool.Exec(
 			context.Background(),
-			fmt.Sprintf("CREATE DATABASE %q", cfg.DBName),
+			fmt.Sprintf(`CREATE DATABASE "%s"`, cfg.DBName),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create database %q: %w", cfg.DBName, err)
