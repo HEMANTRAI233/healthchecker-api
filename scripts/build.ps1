@@ -88,8 +88,7 @@ Copy-Item `
 Write-Host ""
 Write-Host "Building executable..."
 
-go build `
-   -o build/HealthChecker.exe
+go build -o build/HealthChecker.exe
 
 Write-Host ""
 Write-Host "====================================="
