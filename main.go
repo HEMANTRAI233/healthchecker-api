@@ -9,23 +9,42 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
+	exepath, _ := os.Executable()
+	exeDir := filepath.Dir(exepath)
+	logPath := filepath.Join(exeDir, "healthchecker.log")
+	LogFile, err := os.OpenFile(
+		logPath,
+		os.O_CREATE|os.O_WRONLY|os.O_APPEND,
+		0666,
+	)
+	if err != nil {
+		panic(err)
+	}
+	log.SetOutput(LogFile)
+	log.Println("APPLICATION STARTING")
+
 	config.LoadConfig()
-	err := database.ConnectPostgres()
+	err = database.ConnectPostgres()
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("CONFIG LOADED")
 
 	fmt.Println("PostgreSQL Connected")
 	err = database.RunMigrations()
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("PostgreSQL Connected")
+	log.Println("Migrations Applied")
 
 	router := gin.Default()
 	routes.RegisterRoutes(router)
@@ -78,4 +97,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("Server open Triggered")
 }
