@@ -3,8 +3,7 @@ package config
 import (
 	"log"
 	"os"
-
-	"github.com/joho/godotenv"
+	"path/filepath"
 )
 
 type Config struct {
@@ -19,29 +18,106 @@ type Config struct {
 
 var AppConfig Config
 
-func LoadConfig() {
-	err := godotenv.Load("internal/config/app.env")
+// ========================================
+// LOAD ENV FILE
+// ========================================
+
+func LoadEnv() {
+
+	exePath, err := os.Executable()
+
 	if err != nil {
+
+		log.Fatal(err)
+	}
+
+	exeDir := filepath.Dir(exePath)
+
+	envPath := filepath.Join(
+		exeDir,
+		"config",
+		"app.env",
+	)
+
+	_, err = os.Stat(envPath)
+
+	if err != nil {
+
 		log.Println(
 			"config/app.env not found, using system environment variables",
 		)
+
+		return
 	}
 
-	AppConfig = Config{
-		AppPort:    Getenv("APP_PORT", "8080"),
-		DBHost:     Getenv("DB_HOST", "localhost"),
-		DBPort:     Getenv("DB_PORT", "5432"),
-		DBUser:     Getenv("DB_USER", "default_user"),
-		DBPassword: Getenv("DB_PASSWORD", ""),
-		DBName:     Getenv("DB_NAME", "default_db"),
-		DBSSLMode:  Getenv("DB_SSLMODE", "disable"),
+	err = loadEnvFile(envPath)
+
+	if err != nil {
+
+		log.Fatal(err)
 	}
 }
 
-func Getenv(key string, fallback string) string {
+// ========================================
+// LOAD CONFIG INTO STRUCT
+// ========================================
+
+func LoadConfig() {
+
+	AppConfig = Config{
+
+		AppPort: GetEnv(
+			"APP_PORT",
+			"8080",
+		),
+
+		DBHost: GetEnv(
+			"DB_HOST",
+			"localhost",
+		),
+
+		DBPort: GetEnv(
+			"DB_PORT",
+			"5432",
+		),
+
+		DBUser: GetEnv(
+			"DB_USER",
+			"postgres",
+		),
+
+		DBPassword: GetEnv(
+			"DB_PASSWORD",
+			"",
+		),
+
+		DBName: GetEnv(
+			"DB_NAME",
+			"healthchecker",
+		),
+
+		DBSSLMode: GetEnv(
+			"DB_SSLMODE",
+			"disable",
+		),
+	}
+}
+
+// ========================================
+// GET ENV VALUE WITH FALLBACK
+// ========================================
+
+func GetEnv(
+	key string,
+	fallback string,
+) string {
+
 	value := os.Getenv(key)
+
 	if value == "" {
+
 		return fallback
 	}
+
 	return value
 }

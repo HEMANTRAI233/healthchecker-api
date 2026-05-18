@@ -2,16 +2,15 @@ package database
 
 import (
 	"fmt"
-
 	"healthchecker-api/internal/config"
 
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
 
 func RunMigrations() error {
-	connectionString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+	connectionString := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		config.AppConfig.DBUser,
 		config.AppConfig.DBPassword,
 		config.AppConfig.DBHost,
@@ -20,19 +19,34 @@ func RunMigrations() error {
 		config.AppConfig.DBSSLMode,
 	)
 
-	m, err := migrate.New(
-		"file://migrations",
+	migrationsFS, err := iofs.New(
+		MigrationFiles,
+		"migrations",
+	)
+
+	if err != nil {
+
+		return err
+	}
+
+	m, err := migrate.NewWithSourceInstance(
+		"iofs",
+		migrationsFS,
 		connectionString,
 	)
+
 	if err != nil {
+
 		return err
 	}
 
 	err = m.Up()
-	if err != nil && err != migrate.ErrNoChange {
+
+	if err != nil &&
+		err != migrate.ErrNoChange {
+
 		return err
 	}
 
-	fmt.Println("Migrations applied successfully")
 	return nil
 }

@@ -11,7 +11,7 @@ import (
 var DB *pgxpool.Pool
 
 func ConnectPostgres() error {
-		connectionString := fmt.Sprintf(
+	connectionString := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		config.AppConfig.DBHost,
 		config.AppConfig.DBPort,
