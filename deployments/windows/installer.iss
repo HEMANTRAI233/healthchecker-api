@@ -11,9 +11,9 @@ SolidCompression=yes
 
 [Files]
 
-Source: "build\HealthChecker.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\build\HealthChecker.exe"; DestDir: "{app}"; Flags: ignoreversion
 
-Source: "build\config\app.env"; DestDir: "{app}\config"; Flags: ignoreversion
+Source: "..\..\build\config\app.env"; DestDir: "{app}\config"; Flags: ignoreversion
 
 [Icons]
 
