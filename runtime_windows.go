@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"errors"
+	"log"
 
 	"golang.org/x/sys/windows/svc"
 	"healthchecker-api/internal/app"
@@ -58,6 +59,7 @@ func (s *serviceRunner) Execute(_ []string, r <-chan svc.ChangeRequest, status c
 			}
 		case err := <-errCh:
 			if err != nil && !errors.Is(err, context.Canceled) {
+				log.Printf("service runtime exited with error: %v", err)
 				return false, 1
 			}
 			status <- svc.Status{State: svc.Stopped}

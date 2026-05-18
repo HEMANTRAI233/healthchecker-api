@@ -36,7 +36,7 @@ jobs:
             ./scripts/build.ps1 -FrontendRepo "HEMANTRAI233/healthchecker-ui"
           }
 
-      - name: Build Windows executable
+      - name: Verify executable exists
         shell: pwsh
         run: Get-Item ./build/healthchecker.exe
 

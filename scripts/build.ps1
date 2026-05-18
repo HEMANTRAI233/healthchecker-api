@@ -5,6 +5,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
 
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Split-Path -Parent $scriptRoot
@@ -32,6 +33,7 @@ try {
     $env:CGO_ENABLED = "0"
 
     $outExe = Join-Path $OutputDir "healthchecker.exe"
+    # -H=windowsgui builds a no-console Windows binary (better installer UX).
     go build -ldflags "-s -w -H=windowsgui" -o $outExe .
     if ($LASTEXITCODE -ne 0) { throw "go build failed" }
 

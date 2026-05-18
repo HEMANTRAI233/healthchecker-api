@@ -43,7 +43,8 @@ func ConnectPostgres() error {
 		return fmt.Errorf("failed to check database existence: %w", err)
 	}
 	if !exists {
-		// cfg.DBName is validated above; quoting it with %q is safe.
+		// CREATE DATABASE does not accept bind parameters for identifiers.
+		// Safety is enforced by strict DB name validation (dbNameRe) above.
 		_, err = mainPool.Exec(
 			context.Background(),
 			fmt.Sprintf(`CREATE DATABASE "%s"`, cfg.DBName),
