@@ -61,7 +61,13 @@ func main() {
 			c.Status(http.StatusNotFound)
 			return
 		}
-		stat, _ := indexFile.Stat()
+		defer indexFile.Close()
+
+		stat, err := indexFile.Stat()
+		if err != nil {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
 		c.DataFromReader(
 			http.StatusOK,
 			stat.Size(),
@@ -74,5 +80,8 @@ func main() {
 		"Server Running On Port:",
 		config.AppConfig.AppPort,
 	)
-	router.Run(":" + config.AppConfig.AppPort)
+	err = router.Run(":" + config.AppConfig.AppPort)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
