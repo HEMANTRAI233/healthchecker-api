@@ -78,7 +78,7 @@ Write-Host ""
 Write-Host "Copying environment config..."
 
 Copy-Item `
-   "config/app.env" `
+   "internal/config/app.env" `
    "build/config/app.env"
 
 # -----------------------------------
