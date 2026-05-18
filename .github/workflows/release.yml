@@ -1,0 +1,108 @@
+name: Automated Release Pipeline
+
+on:
+
+ repository_dispatch:
+   types:
+     - ui_release
+
+jobs:
+
+ build:
+
+   runs-on: windows-latest
+
+   steps:
+
+     # -----------------------------------
+     # CHECKOUT CODE
+     # -----------------------------------
+
+     - name: Checkout Repository
+       uses: actions/checkout@v4
+
+     # -----------------------------------
+     # SETUP GO
+     # -----------------------------------
+
+     - name: Setup Go
+       uses: actions/setup-go@v5
+       with:
+         go-version: '1.24'
+
+     # -----------------------------------
+     # VERIFY EVENT
+     # -----------------------------------
+
+     - name: Verify Trigger
+       shell: powershell
+       run: |
+
+         Write-Host ""
+         Write-Host "================================="
+         Write-Host "BACKEND PIPELINE TRIGGERED"
+         Write-Host "================================="
+         Write-Host ""
+
+         Write-Host "UI Version Received:"
+         Write-Host "${{ github.event.client_payload.ui_version }}"
+
+     # -----------------------------------
+     # BUILD APPLICATION
+     # -----------------------------------
+
+     - name: Build Application
+       shell: powershell
+       run: |
+
+         ./scripts/build.ps1 `
+           -UiVersion "${{ github.event.client_payload.ui_version }}"
+
+       env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+     # -----------------------------------
+     # INSTALL INNO SETUP
+     # -----------------------------------
+
+     - name: Install Inno Setup
+       run: |
+
+         choco install innosetup -y
+
+     # -----------------------------------
+     # BUILD INSTALLER
+     # -----------------------------------
+
+     - name: Build Installer
+       shell: powershell
+       run: |
+
+         & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+           "deployments/windows/installer.iss"
+
+     # -----------------------------------
+     # VERIFY INSTALLER EXISTS
+     # -----------------------------------
+
+     - name: Verify Installer
+       shell: powershell
+       run: |
+
+         if (!(Test-Path "HealthChecker-Setup.exe")) {
+
+             throw "Installer not generated"
+         }
+
+         Write-Host ""
+         Write-Host "Installer generated successfully"
+
+     # -----------------------------------
+     # UPLOAD INSTALLER ARTIFACT
+     # -----------------------------------
+
+     - name: Upload Installer
+       uses: actions/upload-artifact@v4
+       with:
+         name: HealthChecker-Installer
+         path: HealthChecker-Setup.exe
