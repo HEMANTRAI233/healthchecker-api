@@ -44,7 +44,8 @@ func ConnectPostgres() error {
 	}
 	if !exists {
 		// CREATE DATABASE does not accept bind parameters for identifiers.
-		// Security boundary: dbNameRe validation above strictly limits DB_NAME.
+		// Security boundary: dbNameRe validation above allows only [A-Za-z0-9_]
+		// with a leading letter, preventing SQL-injection payload characters.
 		_, err = mainPool.Exec(
 			context.Background(),
 			fmt.Sprintf(`CREATE DATABASE "%s"`, cfg.DBName),

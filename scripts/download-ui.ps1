@@ -42,9 +42,13 @@ if ($UiVersion -eq "latest") {
 
 Write-Host "Resolving UI release: $UiVersion ($FrontendRepo)"
 $release = Invoke-RestMethod -Uri $releaseUrl -Headers $headers -Method Get
+$resolvedTag = "$($release.tag_name)".Trim()
+if ($resolvedTag -notmatch '^ui-v\d+\.\d+\.\d+$') {
+    throw "Resolved UI tag '$resolvedTag' is invalid. Expected format: ui-v<major>.<minor>.<patch>."
+}
 $asset = $release.assets | Where-Object { $_.name -eq $AssetName } | Select-Object -First 1
 if (-not $asset) {
-    throw "Release '$($release.tag_name)' does not contain asset '$AssetName'."
+    throw "Release '$resolvedTag' does not contain asset '$AssetName'."
 }
 
 $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) "healthchecker-ui-download"

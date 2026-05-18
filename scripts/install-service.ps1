@@ -56,8 +56,14 @@ if ($existing) {
     Start-Sleep -Seconds 1
 }
 
-sc.exe create $ServiceName binPath= "`"$targetExe`"" start= auto DisplayName= "HealthChecker API" | Out-Null
-sc.exe description $ServiceName "HealthChecker API service (React UI + Go API + PostgreSQL)." | Out-Null
+sc.exe create $ServiceName binPath= "`"$targetExe`"" start= auto DisplayName= "HealthChecker API"
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to create service '$ServiceName'."
+}
+sc.exe description $ServiceName "HealthChecker API service (React UI + Go API + PostgreSQL)."
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to set description for service '$ServiceName'."
+}
 Start-Service -Name $ServiceName
 
 Write-Host "Service installed and started: $ServiceName"
