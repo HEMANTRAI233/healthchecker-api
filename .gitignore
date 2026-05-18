@@ -1,4 +1,5 @@
 .env
+!config/app.env
 bin/
 dist/
 tmp/
