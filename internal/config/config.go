@@ -20,7 +20,7 @@ type Config struct {
 var AppConfig Config
 
 func LoadConfig() {
-	err := godotenv.Load("config/app.env")
+	err := godotenv.Load("internal/config/app.env")
 	if err != nil {
 		log.Println(
 			"config/app.env not found, using system environment variables",
