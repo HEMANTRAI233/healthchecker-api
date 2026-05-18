@@ -33,29 +33,40 @@ func LoadEnv() {
 
 	exeDir := filepath.Dir(exePath)
 
-	envPath := filepath.Join(
-		exeDir,
-		"config",
-		"app.env",
-	)
+	envPaths := []string{
+		filepath.Join(
+			exeDir,
+			"config",
+			"app.env",
+		),
+		filepath.Join(
+			exeDir,
+			"internal",
+			"config",
+			"app.env",
+		),
+	}
 
-	_, err = os.Stat(envPath)
+	for _, envPath := range envPaths {
 
-	if err != nil {
+		_, err = os.Stat(envPath)
 
-		log.Println(
-			"config/app.env not found, using system environment variables",
-		)
+		if err != nil {
+			continue
+		}
+
+		err = loadEnvFile(envPath)
+
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		return
 	}
 
-	err = loadEnvFile(envPath)
-
-	if err != nil {
-
-		log.Fatal(err)
-	}
+	log.Println(
+		"config/app.env not found, using system environment variables",
+	)
 }
 
 // ========================================
