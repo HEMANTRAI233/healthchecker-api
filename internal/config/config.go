@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/joho/godotenv"
 )
@@ -27,7 +28,7 @@ func getEnv(key, defaultVal string) string {
 }
 
 func LoadConfig() {
-	_ = godotenv.Load()
+	loadEnvFiles()
 	AppConfig = Config{
 		AppPort:    getEnv("APP_PORT", "8080"),
 		DBHost:     getEnv("DB_HOST", "localhost"),
@@ -38,4 +39,15 @@ func LoadConfig() {
 		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
 		GinMode:    getEnv("GIN_MODE", "release"),
 	}
+}
+
+func loadEnvFiles() {
+	_ = godotenv.Load()
+
+	exePath, err := os.Executable()
+	if err != nil {
+		return
+	}
+	exeDir := filepath.Dir(exePath)
+	_ = godotenv.Overload(filepath.Join(exeDir, ".env"))
 }

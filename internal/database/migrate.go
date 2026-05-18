@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"embed"
 	"fmt"
 	"io/fs"
 	"sort"
@@ -12,7 +11,7 @@ import (
 // RunMigrations applies any pending SQL migration files embedded in migrationFS.
 // Migration files must live in a top-level "migrations/" directory inside the FS
 // and follow the naming convention NNN_description.sql (sorted lexicographically).
-func RunMigrations(migrationFS embed.FS) error {
+func RunMigrations(migrationFS fs.FS) error {
 	// Ensure the tracking table exists.
 	_, err := DB.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -64,7 +63,7 @@ func RunMigrations(migrationFS embed.FS) error {
 			continue
 		}
 
-		content, err := migrationFS.ReadFile("migrations/" + file)
+		content, err := fs.ReadFile(migrationFS, "migrations/"+file)
 		if err != nil {
 			return fmt.Errorf("failed to read migration file %s: %w", file, err)
 		}

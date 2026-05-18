@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     permissions:
       contents: write  # required to create releases and download release assets
 
@@ -20,96 +20,55 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ------------------------------------------------------------------ #
-      # Determine which frontend release tag to consume                     #
-      # ------------------------------------------------------------------ #
-      - name: Resolve UI version
-        id: ui_version
-        run: |
-          if [ -n "${{ github.event.inputs.ui_version }}" ]; then
-            VERSION="${{ github.event.inputs.ui_version }}"
-          elif [ -f UI_VERSION ]; then
-            VERSION="$(tr -d '[:space:]' < UI_VERSION)"
-          else
-            VERSION="latest"
-          fi
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Resolved UI version: ${VERSION}"
-
-      # ------------------------------------------------------------------ #
-      # Download & extract the React build artifact from the frontend repo  #
-      # The frontend CI must publish a release asset named dist.zip         #
-      # ------------------------------------------------------------------ #
-      - name: Download frontend artifact
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          UI_VERSION="${{ steps.ui_version.outputs.version }}"
-          # TODO: replace with the actual frontend repository slug
-          FRONTEND_REPO="HEMANTRAI233/healthchecker-ui"
-
-          mkdir -p /tmp/ui-artifact ui/dist
-
-          if [ "$UI_VERSION" = "latest" ]; then
-            gh release download \
-              --repo "$FRONTEND_REPO" \
-              --pattern "dist.zip" \
-              --dir /tmp/ui-artifact
-          else
-            gh release download "$UI_VERSION" \
-              --repo "$FRONTEND_REPO" \
-              --pattern "dist.zip" \
-              --dir /tmp/ui-artifact
-          fi
-
-          # Extract into ui/dist/, overwriting the placeholder index.html
-          unzip -o /tmp/ui-artifact/dist.zip -d ui/dist/
-          echo "Frontend artifact extracted"
-
-      # ------------------------------------------------------------------ #
-      # Set up Go                                                           #
-      # ------------------------------------------------------------------ #
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
-      # ------------------------------------------------------------------ #
-      # Build the Windows executable (single .exe, UI + API embedded)      #
-      # ------------------------------------------------------------------ #
-      - name: Build Windows executable
+      - name: Build backend executable
+        shell: pwsh
         env:
-          GOOS: windows
-          GOARCH: amd64
-          CGO_ENABLED: "0"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          go build -ldflags="-s -w" -o healthchecker.exe .
-          echo "Build complete: $(du -sh healthchecker.exe)"
+          if ("${{ github.event.inputs.ui_version }}" -ne "") {
+            ./scripts/build.ps1 -UiVersion "${{ github.event.inputs.ui_version }}" -FrontendRepo "HEMANTRAI233/healthchecker-ui"
+          } else {
+            ./scripts/build.ps1 -FrontendRepo "HEMANTRAI233/healthchecker-ui"
+          }
 
-      # ------------------------------------------------------------------ #
-      # Upload the .exe as a workflow artifact                              #
-      # ------------------------------------------------------------------ #
+      - name: Build Windows executable
+        shell: pwsh
+        run: Get-Item ./build/healthchecker.exe
+
+      - name: Package install scripts
+        shell: pwsh
+        run: Compress-Archive -Path ./scripts/* -DestinationPath ./build/windows-install-scripts.zip -Force
+
       - name: Upload Windows executable
         uses: actions/upload-artifact@v4
         with:
           name: healthchecker-windows-amd64
-          path: healthchecker.exe
+          path: |
+            build/healthchecker.exe
+            build/windows-install-scripts.zip
+            UI_VERSION
           if-no-files-found: error
 
-      # ------------------------------------------------------------------ #
-      # Create a GitHub release when the build is triggered from main      #
-      # ------------------------------------------------------------------ #
       - name: Create GitHub release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
         run: |
-          UI_VERSION="${{ steps.ui_version.outputs.version }}"
-          SHORT_SHA="${GITHUB_SHA::7}"
-          TAG="backend-${SHORT_SHA}"
-          TITLE="Backend build ${SHORT_SHA} (UI: ${UI_VERSION})"
+          $uiVersion = (Get-Content ./UI_VERSION -Raw).Trim()
+          if ("${{ github.event.inputs.ui_version }}" -ne "") {
+            $uiVersion = "${{ github.event.inputs.ui_version }}"
+          }
+          $shortSha = "${{ github.sha }}".Substring(0,7)
+          $tag = "backend-$shortSha"
+          $title = "Backend build $shortSha (UI: $uiVersion)"
 
-          gh release create "$TAG" healthchecker.exe \
-            --title "$TITLE" \
-            --notes "Automated backend release. Embeds frontend ${UI_VERSION}." \
+          gh release create $tag ./build/healthchecker.exe ./build/windows-install-scripts.zip `
+            --title $title `
+            --notes "Automated backend release. Embeds frontend $uiVersion." `
             --latest

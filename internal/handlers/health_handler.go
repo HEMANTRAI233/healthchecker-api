@@ -9,21 +9,13 @@ import (
 	"healthchecker-api/internal/database"
 )
 
-// HealthCheck returns a simple liveness response.
-func HealthCheck(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"status": "UP",
-	})
-}
-
 type DBCheckResponse struct {
-	Status    string    `json:"status"`
-	DBVersion string    `json:"db_version"`
-	Timestamp time.Time `json:"timestamp"`
+	Status          string    `json:"status"`
+	PostgresVersion string    `json:"postgres_version"`
+	CurrentTime     time.Time `json:"current_time"`
 }
 
-// DBCheck queries PostgreSQL for its version and current timestamp.
-func DBCheck(c *gin.Context) {
+func dbCheck(c *gin.Context) {
 	var version string
 	var timestamp time.Time
 
@@ -40,8 +32,18 @@ func DBCheck(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, DBCheckResponse{
-		Status:    "UP",
-		DBVersion: version,
-		Timestamp: timestamp,
+		Status:          "UP",
+		PostgresVersion: version,
+		CurrentTime:     timestamp,
 	})
+}
+
+// HealthCheck queries PostgreSQL and returns service + database health.
+func HealthCheck(c *gin.Context) {
+	dbCheck(c)
+}
+
+// DBCheck exists for compatibility and delegates to the same health payload.
+func DBCheck(c *gin.Context) {
+	dbCheck(c)
 }
