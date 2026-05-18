@@ -22,7 +22,7 @@ func main() {
 	}
 
 	config.LoadConfig()
-	err := database.ConnectPostgres()
+	err = database.ConnectPostgres()
 	if err != nil {
 		log.Fatal(err)
 	}
