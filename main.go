@@ -24,16 +24,32 @@ func main() {
 	// LOG FILE SETUP
 	// ========================================
 
-	exePath, err := os.Executable()
+	appDataDir, err := os.UserConfigDir()
+
+	if err != nil {
+		appDataDir, err = os.UserHomeDir()
+
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	logsDir := filepath.Join(
+		appDataDir,
+		"HealthChecker",
+	)
+
+	err = os.MkdirAll(
+		logsDir,
+		0755,
+	)
 
 	if err != nil {
 		panic(err)
 	}
 
-	exeDir := filepath.Dir(exePath)
-
 	logPath := filepath.Join(
-		exeDir,
+		logsDir,
 		"healthchecker.log",
 	)
 
