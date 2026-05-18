@@ -48,7 +48,11 @@ if ($existing) {
     if ($existing.Status -ne "Stopped") {
         Stop-Service -Name $ServiceName -Force
     }
-    sc.exe delete $ServiceName | Out-Null
+    Write-Host "Deleting existing service: $ServiceName"
+    sc.exe delete $ServiceName
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to delete existing service '$ServiceName'."
+    }
     Start-Sleep -Seconds 1
 }
 

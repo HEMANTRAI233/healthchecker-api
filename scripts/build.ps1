@@ -34,6 +34,8 @@ try {
 
     $outExe = Join-Path $OutputDir "healthchecker.exe"
     # -H=windowsgui builds a no-console Windows binary (better installer UX).
+    # For local debugging with console output, run:
+    # go build -ldflags "-s -w" -o (Join-Path $OutputDir "healthchecker-console.exe") .
     go build -ldflags "-s -w -H=windowsgui" -o $outExe .
     if ($LASTEXITCODE -ne 0) { throw "go build failed" }
 

@@ -70,5 +70,4 @@ jobs:
 
           gh release create $tag ./build/healthchecker.exe ./build/windows-install-scripts.zip `
             --title $title `
-            --notes "Automated backend release. Embeds frontend $uiVersion." `
-            --latest
+            --notes "Automated backend release. Embeds frontend $uiVersion."

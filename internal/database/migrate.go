@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"sort"
@@ -74,15 +75,15 @@ func RunMigrations(migrationFS fs.FS) error {
 		}
 
 		if _, err = tx.Exec(context.Background(), string(content)); err != nil {
-			_ = tx.Rollback(context.Background())
-			return fmt.Errorf("failed to apply migration %s: %w", file, err)
+			rollbackErr := tx.Rollback(context.Background())
+			return fmt.Errorf("failed to apply migration %s: %w", file, errors.Join(err, rollbackErr))
 		}
 
 		if _, err = tx.Exec(context.Background(),
 			"INSERT INTO schema_migrations (version) VALUES ($1)", version,
 		); err != nil {
-			_ = tx.Rollback(context.Background())
-			return fmt.Errorf("failed to record migration %s: %w", file, err)
+			rollbackErr := tx.Rollback(context.Background())
+			return fmt.Errorf("failed to record migration %s: %w", file, errors.Join(err, rollbackErr))
 		}
 
 		if err = tx.Commit(context.Background()); err != nil {

@@ -44,7 +44,7 @@ func ConnectPostgres() error {
 	}
 	if !exists {
 		// CREATE DATABASE does not accept bind parameters for identifiers.
-		// Safety is enforced by strict DB name validation (dbNameRe) above.
+		// Security boundary: dbNameRe validation above strictly limits DB_NAME.
 		_, err = mainPool.Exec(
 			context.Background(),
 			fmt.Sprintf(`CREATE DATABASE "%s"`, cfg.DBName),

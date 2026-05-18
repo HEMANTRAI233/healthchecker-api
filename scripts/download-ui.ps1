@@ -23,7 +23,7 @@ if ([string]::IsNullOrWhiteSpace($UiVersion)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($UiVersion)) {
-    $UiVersion = "latest"
+    throw "UI version not provided. Set -UiVersion or add UI_VERSION file."
 }
 
 $headers = @{

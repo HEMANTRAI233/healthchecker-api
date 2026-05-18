@@ -10,7 +10,7 @@ import (
 	"healthchecker-api/ui"
 )
 
-func RegisterRoutes(router *gin.Engine) {
+func RegisterRoutes(router *gin.Engine) error {
 	// API routes
 	api := router.Group("/api")
 	{
@@ -23,7 +23,7 @@ func RegisterRoutes(router *gin.Engine) {
 	// Unknown paths fall back to index.html to support client-side routing.
 	distFS, err := fs.Sub(ui.StaticFiles, "dist")
 	if err != nil {
-		panic("failed to create sub-FS for embedded UI: " + err.Error())
+		return err
 	}
 	fileServer := http.FileServer(http.FS(distFS))
 
@@ -41,4 +41,6 @@ func RegisterRoutes(router *gin.Engine) {
 		c.Request.URL.Path = "/"
 		fileServer.ServeHTTP(c.Writer, c.Request)
 	})
+
+	return nil
 }

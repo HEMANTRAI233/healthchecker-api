@@ -26,7 +26,9 @@ func Run(ctx context.Context, migrationFS fs.FS) error {
 	}
 
 	router := gin.Default()
-	routes.RegisterRoutes(router)
+	if err := routes.RegisterRoutes(router); err != nil {
+		return fmt.Errorf("failed to register routes: %w", err)
+	}
 
 	server := &http.Server{
 		Addr:    ":" + config.AppConfig.AppPort,
