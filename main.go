@@ -12,15 +12,21 @@ import (
 
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	config.LoadConfig()
 	err := database.ConnectPostgres()
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	fmt.Println("PostgreSQL Connected")
 	err = database.RunMigrations()
 	if err != nil {

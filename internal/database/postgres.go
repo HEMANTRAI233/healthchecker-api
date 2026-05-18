@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"healthchecker-api/internal/config"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
