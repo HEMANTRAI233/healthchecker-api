@@ -89,7 +89,7 @@ Write-Host ""
 Write-Host "Building executable..."
 
 go build `
-   -ldflags="-H windowsgui" `
+  # -ldflags="-H windowsgui" `
    -o build/HealthChecker.exe
 
 Write-Host ""
