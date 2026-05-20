@@ -35,7 +35,7 @@ Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Fil
 
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\configure-iis.ps1"""; Flags: runhidden waituntilterminated
 
-Filename: "http://localhost/Healthchecker"; Description: "Open HealthChecker in browser"; Flags: postinstall skipifsilent shellexec
+Filename: "http://localhost/Healthchecker/"; Description: "Open HealthChecker in browser"; Flags: postinstall skipifsilent shellexec
 
 [UninstallRun]
 
