@@ -26,10 +26,11 @@ if ($modules -notmatch "ARRv2_Proxy") {
 
 & $appCmd start site /site.name:"Default Web Site" | Out-Null
 
-$siteRoot = Join-Path $env:SystemDrive "inetpub\wwwroot"
+$siteRootRaw = (& $appCmd list site "Default Web Site" /text:physicalPath).Trim()
+$siteRoot = [Environment]::ExpandEnvironmentVariables($siteRootRaw)
 
 if (-not (Test-Path $siteRoot)) {
-        throw "IIS site root not found at: $siteRoot"
+    throw "IIS site root not found at: $siteRoot"
 }
 
 $healthcheckerDir = Join-Path $siteRoot "Healthchecker"

@@ -2,6 +2,7 @@
 
 AppName=HealthChecker
 AppVersion=1.0.0
+PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 DefaultDirName={pf}\HealthChecker
@@ -11,10 +12,6 @@ OutputBaseFilename=HealthChecker-Setup
 Compression=lzma
 SolidCompression=yes
 
-[Dirs]
-
-Name: "{sd}\inetpub\wwwroot\Healthchecker"
-
 [Files]
 
 Source: "..\..\build\HealthChecker.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -23,11 +20,9 @@ Source: "..\..\build\config\app.env"; DestDir: "{app}\config"; Flags: ignorevers
 
 Source: "configure-iis.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 
+Source: "ensure-iis.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+
 Source: "verify-iis.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
-
-Source: "wwwroot.web.config"; DestDir: "{sd}\inetpub\wwwroot"; DestName: "web.config"; Flags: ignoreversion
-
-Source: "healthchecker-folder.web.config"; DestDir: "{sd}\inetpub\wwwroot\Healthchecker"; DestName: "web.config"; Flags: ignoreversion
 
 Source: "register-service.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 
@@ -41,14 +36,16 @@ Name: "{commondesktop}\HealthChecker"; Filename: "{app}\HealthChecker.exe"
 
 [Run]
 
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\register-service.ps1"""; Flags: runhidden waituntilterminated runascurrentuser
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\register-service.ps1"""; Flags: runhidden waituntilterminated
 
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\configure-iis.ps1"""; Flags: runhidden waituntilterminated runascurrentuser
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\ensure-iis.ps1"""; Flags: runhidden waituntilterminated
 
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\verify-iis.ps1"""; Flags: runhidden waituntilterminated runascurrentuser
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\configure-iis.ps1"""; Flags: runhidden waituntilterminated
+
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\verify-iis.ps1"""; Flags: runhidden waituntilterminated
 
 Filename: "http://localhost/Healthchecker/"; Description: "Open HealthChecker in browser"; Flags: postinstall skipifsilent shellexec
 
 [UninstallRun]
 
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\unregister-service.ps1"""; Flags: runhidden waituntilterminated runascurrentuser
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\unregister-service.ps1"""; Flags: runhidden waituntilterminated

@@ -1,9 +1,18 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$markerPath = "C:\inetpub\wwwroot\Healthchecker\healthchecker-iis-configured.txt"
-$rootWebConfigPath = "C:\inetpub\wwwroot\web.config"
-$folderWebConfigPath = "C:\inetpub\wwwroot\Healthchecker\web.config"
+$appCmd = Join-Path $env:WinDir "System32\inetsrv\appcmd.exe"
+
+if (-not (Test-Path $appCmd)) {
+    throw "IIS appcmd not found."
+}
+
+$siteRootRaw = (& $appCmd list site "Default Web Site" /text:physicalPath).Trim()
+$siteRoot = [Environment]::ExpandEnvironmentVariables($siteRootRaw)
+
+$markerPath = Join-Path $siteRoot "Healthchecker\healthchecker-iis-configured.txt"
+$rootWebConfigPath = Join-Path $siteRoot "web.config"
+$folderWebConfigPath = Join-Path $siteRoot "Healthchecker\web.config"
 $logPath = "C:\ProgramData\HealthChecker\configure-iis.log"
 
 if (-not (Test-Path $markerPath)) {
