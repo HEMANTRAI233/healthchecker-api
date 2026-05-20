@@ -2,6 +2,8 @@
 
 AppName=HealthChecker
 AppVersion=1.0.0
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 DefaultDirName={pf}\HealthChecker
 DefaultGroupName=HealthChecker
 OutputDir=..\..
