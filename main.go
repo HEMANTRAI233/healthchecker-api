@@ -209,7 +209,7 @@ func main() {
 
 		time.Sleep(2 * time.Second)
 
-		url := "http://" + listenAddress
+		url := "http://localhost/Healthchecker"
 
 		err := exec.Command(
 			"cmd",
