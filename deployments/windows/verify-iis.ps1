@@ -35,3 +35,29 @@ if (-not (Test-Path $folderWebConfigPath)) {
 }
 
 Write-Host "IIS marker file found: $markerPath"
+
+$backendHealthUrl = "http://127.0.0.1:8080/api/health"
+$maxAttempts = 20
+$success = $false
+
+for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    try {
+        $response = Invoke-WebRequest -Uri $backendHealthUrl -UseBasicParsing -TimeoutSec 3
+
+        if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) {
+            $success = $true
+            break
+        }
+    }
+    catch {
+        # Service may still be starting; retry.
+    }
+
+    Start-Sleep -Seconds 1
+}
+
+if (-not $success) {
+    throw "HealthChecker backend is not reachable at $backendHealthUrl. Check Windows service status and logs in C:\ProgramData\HealthChecker\service-*.log"
+}
+
+Write-Host "Backend health endpoint is reachable: $backendHealthUrl"
