@@ -19,6 +19,8 @@ Source: "..\..\build\config\app.env"; DestDir: "{app}\config"; Flags: ignorevers
 
 Source: "configure-iis.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 
+Source: "verify-iis.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+
 Source: "register-service.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 
 Source: "unregister-service.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
@@ -35,7 +37,7 @@ Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile
 
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\configure-iis.ps1"""; Flags: runhidden waituntilterminated runascurrentuser
 
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""if (!(Test-Path 'C:\inetpub\wwwroot\Healthchecker\healthchecker-iis-configured.txt')) { Write-Error 'IIS configuration marker not found. Check C:\ProgramData\HealthChecker\configure-iis.log'; exit 1 }"""; Flags: runhidden waituntilterminated runascurrentuser
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\verify-iis.ps1"""; Flags: runhidden waituntilterminated runascurrentuser
 
 Filename: "http://localhost/Healthchecker/"; Description: "Open HealthChecker in browser"; Flags: postinstall skipifsilent shellexec
 
