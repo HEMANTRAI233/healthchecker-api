@@ -137,7 +137,14 @@ Ensure-RewriteAndArr
 
 & $appCmd start site /site.name:"Default Web Site" | Out-Null
 
-$siteRootRaw = (& $appCmd list site "Default Web Site" /text:physicalPath).Trim()
+Import-Module WebAdministration
+$website = Get-Website -Name "Default Web Site" -ErrorAction Stop
+$siteRootRaw = $website.physicalPath
+
+if ([string]::IsNullOrWhiteSpace($siteRootRaw)) {
+    throw "Default Web Site physical path is empty."
+}
+
 $siteRoot = [Environment]::ExpandEnvironmentVariables($siteRootRaw)
 
 if (-not (Test-Path $siteRoot)) {

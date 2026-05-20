@@ -7,7 +7,14 @@ if (-not (Test-Path $appCmd)) {
     throw "IIS appcmd not found."
 }
 
-$siteRootRaw = (& $appCmd list site "Default Web Site" /text:physicalPath).Trim()
+Import-Module WebAdministration
+$website = Get-Website -Name "Default Web Site" -ErrorAction Stop
+$siteRootRaw = $website.physicalPath
+
+if ([string]::IsNullOrWhiteSpace($siteRootRaw)) {
+    throw "Default Web Site physical path is empty."
+}
+
 $siteRoot = [Environment]::ExpandEnvironmentVariables($siteRootRaw)
 
 $markerPath = Join-Path $siteRoot "Healthchecker\healthchecker-iis-configured.txt"
