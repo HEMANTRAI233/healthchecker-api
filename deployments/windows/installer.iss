@@ -25,4 +25,6 @@ Name: "{commondesktop}\HealthChecker"; Filename: "{app}\HealthChecker.exe"
 
 [Run]
 
+Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""HealthChecker"" dir=in action=allow program=""{app}\HealthChecker.exe"" enable=yes"; Flags:runhidden
+
 Filename: "{app}\HealthChecker.exe"; Description: "Launch HealthChecker"; Flags: nowait postinstall skipifsilent

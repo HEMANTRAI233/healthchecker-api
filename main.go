@@ -18,6 +18,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func serverAddress(port string) string {
+	return "127.0.0.1:" + port
+}
+
 func main() {
 
 	// ========================================
@@ -188,9 +192,13 @@ func main() {
 			config.AppConfig.AppPort,
 	)
 
-	fmt.Println(
-		"Server Running On Port:",
+	listenAddress := serverAddress(
 		config.AppConfig.AppPort,
+	)
+
+	fmt.Println(
+		"Server Running On:",
+		listenAddress,
 	)
 
 	// ========================================
@@ -201,8 +209,7 @@ func main() {
 
 		time.Sleep(2 * time.Second)
 
-		url := "http://127.0.0.1:" +
-			config.AppConfig.AppPort
+		url := "http://" + listenAddress
 
 		err := exec.Command(
 			"cmd",
@@ -224,7 +231,7 @@ func main() {
 	// ========================================
 
 	err = router.Run(
-		":" + config.AppConfig.AppPort,
+		listenAddress,
 	)
 
 	if err != nil {
