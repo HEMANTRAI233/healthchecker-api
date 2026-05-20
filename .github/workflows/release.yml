@@ -96,7 +96,7 @@ jobs:
          }
 
          Write-Host ""
-         Write-Host "✓ Windows installer generated successfully"
+         Write-Host "[OK] Windows installer generated successfully"
 
      # -----------------------------------
      # UPLOAD WINDOWS INSTALLER ARTIFACT
@@ -170,7 +170,7 @@ jobs:
          }
 
          Write-Host ""
-         Write-Host "✓ Linux installer bundle generated successfully"
+         Write-Host "[OK] Linux installer bundle generated successfully"
 
      # -----------------------------------
      # UPLOAD LINUX INSTALLER ARTIFACT
