@@ -1,10 +1,13 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$scriptVersion = "2026-05-20.2"
+
 $logDir = Join-Path $env:ProgramData "HealthChecker"
 New-Item -Path $logDir -ItemType Directory -Force | Out-Null
 $logPath = Join-Path $logDir "configure-iis.log"
 Start-Transcript -Path $logPath -Append | Out-Null
+Write-Host "HealthChecker configure-iis script version: $scriptVersion"
 
 $appCmd = Join-Path $env:WinDir "System32\inetsrv\appcmd.exe"
 
@@ -28,6 +31,21 @@ function Ensure-Chocolatey {
     Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 }
 
+function Install-MsiPackage {
+    param(
+        [string]$Url,
+        [string]$Name
+    )
+
+    $downloadPath = Join-Path $env:TEMP ("{0}.msi" -f $Name)
+    Invoke-WebRequest -Uri $Url -OutFile $downloadPath -UseBasicParsing
+    $process = Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$downloadPath`" /qn /norestart" -Wait -PassThru
+
+    if ($process.ExitCode -ne 0) {
+        throw "Failed installing $Name MSI. ExitCode=$($process.ExitCode)"
+    }
+}
+
 function Ensure-RewriteAndArr {
     $modules = Get-IISModules
     $hasRewrite = $modules -match "RewriteModule"
@@ -39,9 +57,39 @@ function Ensure-RewriteAndArr {
 
     Write-Host "Installing missing IIS proxy dependencies..."
 
-    Ensure-Chocolatey
-    choco install urlrewrite -y --no-progress
-    choco install iis-arr -y --no-progress
+    $installed = $false
+
+    try {
+        Ensure-Chocolatey
+        choco install urlrewrite -y --no-progress
+        choco install iis-arr -y --no-progress
+        $installed = $true
+    }
+    catch {
+        Write-Host "Chocolatey install path failed: $($_.Exception.Message)"
+    }
+
+    if (-not $installed) {
+        try {
+            $winget = Get-Command winget -ErrorAction SilentlyContinue
+
+            if ($null -ne $winget) {
+                winget install --id Microsoft.URLRewrite --exact --silent --accept-source-agreements --accept-package-agreements
+                winget install --id Microsoft.IIS.ARR --exact --silent --accept-source-agreements --accept-package-agreements
+                $installed = $true
+            }
+        }
+        catch {
+            Write-Host "winget install path failed: $($_.Exception.Message)"
+        }
+    }
+
+    if (-not $installed) {
+        # Direct MSI fallback from Microsoft download endpoints.
+        Install-MsiPackage -Url "https://download.microsoft.com/download/D/D/9/DD9A82D0-1E3C-4AF2-8CB0-819C8D6D54A8/rewrite_amd64_en-US.msi" -Name "urlrewrite"
+        Install-MsiPackage -Url "https://download.microsoft.com/download/9/5/D/95D5A1B2-4D63-43A1-A35F-92357F7C1D8B/requestRouter_amd64.msi" -Name "iis-arr"
+    }
+
     iisreset /restart | Out-Null
 
     $modules = Get-IISModules
