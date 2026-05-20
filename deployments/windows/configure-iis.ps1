@@ -19,6 +19,18 @@ function Get-IISModules {
     return & $appCmd list modules /text:name
 }
 
+function Test-RewriteAndArrPresence {
+    $modules = Get-IISModules
+    $hasRewrite = $modules -match "RewriteModule"
+    $hasArr = $modules -match "ARRv2_Proxy"
+
+    return @{
+        HasRewrite = $hasRewrite
+        HasArr = $hasArr
+        Modules = $modules
+    }
+}
+
 function Ensure-Chocolatey {
     $choco = Get-Command choco -ErrorAction SilentlyContinue
 
@@ -47,9 +59,11 @@ function Install-MsiPackage {
 }
 
 function Ensure-RewriteAndArr {
-    $modules = Get-IISModules
-    $hasRewrite = $modules -match "RewriteModule"
-    $hasArr = $modules -match "ARRv2_Proxy"
+    $state = Test-RewriteAndArrPresence
+    $hasRewrite = $state.HasRewrite
+    $hasArr = $state.HasArr
+
+    Write-Host "Initial module detection: RewriteModule=$hasRewrite ARRv2_Proxy=$hasArr"
 
     if ($hasRewrite -and $hasArr) {
         return
@@ -92,12 +106,37 @@ function Ensure-RewriteAndArr {
 
     iisreset /restart | Out-Null
 
-    $modules = Get-IISModules
-    $hasRewrite = $modules -match "RewriteModule"
-    $hasArr = $modules -match "ARRv2_Proxy"
+    $state = Test-RewriteAndArrPresence
+    $hasRewrite = $state.HasRewrite
+    $hasArr = $state.HasArr
+
+    Write-Host "Post-install module detection: RewriteModule=$hasRewrite ARRv2_Proxy=$hasArr"
 
     if (-not $hasRewrite -or -not $hasArr) {
-        throw "IIS URL Rewrite/ARR installation failed. Install URL Rewrite 2.x and ARR manually, then rerun setup."
+        Write-Host "Forcing package reinstallation to repair IIS module registration..."
+
+        try {
+            Ensure-Chocolatey
+            choco upgrade urlrewrite -y --force --no-progress
+            choco upgrade iis-arr -y --force --no-progress
+        }
+        catch {
+            Write-Host "Forced package repair failed: $($_.Exception.Message)"
+        }
+
+        iisreset /restart | Out-Null
+
+        $state = Test-RewriteAndArrPresence
+        $hasRewrite = $state.HasRewrite
+        $hasArr = $state.HasArr
+
+        Write-Host "Post-repair module detection: RewriteModule=$hasRewrite ARRv2_Proxy=$hasArr"
+    }
+
+    if (-not $hasRewrite -or -not $hasArr) {
+        Write-Host "IIS modules visible to appcmd:"
+        Write-Host $state.Modules
+        throw "IIS URL Rewrite/ARR installation failed or modules are not registered in IIS. Manually reinstall URL Rewrite and ARR, run iisreset, then rerun setup."
     }
 }
 
