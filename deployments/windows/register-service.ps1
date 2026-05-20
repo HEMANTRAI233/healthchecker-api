@@ -7,11 +7,26 @@ $installRoot = Split-Path -Parent $PSScriptRoot
 $exePath = Join-Path $installRoot "HealthChecker.exe"
 $serviceLogDir = "C:\ProgramData\HealthChecker"
 
+New-Item -Path $serviceLogDir -ItemType Directory -Force | Out-Null
+$registerLogPath = Join-Path $serviceLogDir "register-service.log"
+Start-Transcript -Path $registerLogPath -Append | Out-Null
+
 if (-not (Test-Path $exePath)) {
     throw "HealthChecker executable not found at: $exePath"
 }
 
-New-Item -Path $serviceLogDir -ItemType Directory -Force | Out-Null
+function Invoke-NativeChecked {
+    param(
+        [string]$FilePath,
+        [string[]]$Arguments
+    )
+
+    & $FilePath @Arguments | Out-Null
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Command failed: $FilePath $($Arguments -join ' ') (exit code $LASTEXITCODE)"
+    }
+}
 
 function Get-NssmPath {
     $nssm = Get-Command nssm -ErrorAction SilentlyContinue
@@ -58,18 +73,32 @@ if ($null -ne $existing) {
         Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
     }
 
-    & $nssmPath remove $serviceName confirm | Out-Null
+    Invoke-NativeChecked -FilePath $nssmPath -Arguments @("remove", $serviceName, "confirm")
 }
 
-& $nssmPath install $serviceName $exePath | Out-Null
-& $nssmPath set $serviceName DisplayName $displayName | Out-Null
-& $nssmPath set $serviceName Description "HealthChecker backend service" | Out-Null
-& $nssmPath set $serviceName AppDirectory $installRoot | Out-Null
-& $nssmPath set $serviceName Start SERVICE_AUTO_START | Out-Null
-& $nssmPath set $serviceName AppStdout (Join-Path $serviceLogDir "service-stdout.log") | Out-Null
-& $nssmPath set $serviceName AppStderr (Join-Path $serviceLogDir "service-stderr.log") | Out-Null
-& $nssmPath set $serviceName AppRotateFiles 1 | Out-Null
-& $nssmPath set $serviceName AppRotateOnline 1 | Out-Null
+Invoke-NativeChecked -FilePath $nssmPath -Arguments @("install", $serviceName, $exePath)
+Invoke-NativeChecked -FilePath $nssmPath -Arguments @("set", $serviceName, "DisplayName", $displayName)
+Invoke-NativeChecked -FilePath $nssmPath -Arguments @("set", $serviceName, "Description", "HealthChecker backend service")
+Invoke-NativeChecked -FilePath $nssmPath -Arguments @("set", $serviceName, "AppDirectory", $installRoot)
+Invoke-NativeChecked -FilePath $nssmPath -Arguments @("set", $serviceName, "Start", "SERVICE_AUTO_START")
+Invoke-NativeChecked -FilePath $nssmPath -Arguments @("set", $serviceName, "AppStdout", (Join-Path $serviceLogDir "service-stdout.log"))
+Invoke-NativeChecked -FilePath $nssmPath -Arguments @("set", $serviceName, "AppStderr", (Join-Path $serviceLogDir "service-stderr.log"))
+Invoke-NativeChecked -FilePath $nssmPath -Arguments @("set", $serviceName, "AppRotateFiles", "1")
+Invoke-NativeChecked -FilePath $nssmPath -Arguments @("set", $serviceName, "AppRotateOnline", "1")
 
 Start-Service -Name $serviceName
+
+$installedService = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+
+if ($null -eq $installedService) {
+    throw "Service '$serviceName' was not found after installation."
+}
+
+if ($installedService.Status -ne "Running") {
+    throw "Service '$serviceName' is not running after startup. Current status: $($installedService.Status)"
+}
+
 Write-Host "Windows service '$serviceName' is installed and running."
+Write-Host "Service registration log: $registerLogPath"
+
+Stop-Transcript | Out-Null

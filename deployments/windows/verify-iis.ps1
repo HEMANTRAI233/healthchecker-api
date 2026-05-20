@@ -36,6 +36,16 @@ if (-not (Test-Path $folderWebConfigPath)) {
 
 Write-Host "IIS marker file found: $markerPath"
 
+$service = Get-Service -Name "HealthChecker" -ErrorAction SilentlyContinue
+
+if ($null -eq $service) {
+    throw "HealthChecker Windows service is not installed. Check C:\ProgramData\HealthChecker\register-service.log"
+}
+
+if ($service.Status -ne "Running") {
+    throw "HealthChecker Windows service is not running. Current status: $($service.Status). Check C:\ProgramData\HealthChecker\service-*.log"
+}
+
 $backendHealthUrl = "http://127.0.0.1:8080/api/health"
 $maxAttempts = 20
 $success = $false
