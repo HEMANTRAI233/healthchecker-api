@@ -8,7 +8,7 @@ on:
 
 jobs:
 
- build:
+ build-windows:
 
    runs-on: windows-latest
 
@@ -51,12 +51,13 @@ jobs:
      # BUILD APPLICATION
      # -----------------------------------
 
-     - name: Build Application
+     - name: Build Windows Application
        shell: powershell
        run: |
 
          ./scripts/build.ps1 `
-           -UiVersion "${{ github.event.client_payload.ui_version }}"
+           -UiVersion "${{ github.event.client_payload.ui_version }}" `
+           -TargetPlatform "windows"
 
        env:
          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -71,10 +72,10 @@ jobs:
          choco install innosetup -y
 
      # -----------------------------------
-     # BUILD INSTALLER
+     # BUILD WINDOWS INSTALLER
      # -----------------------------------
 
-     - name: Build Installer
+     - name: Build Windows Installer
        shell: powershell
        run: |
 
@@ -82,27 +83,104 @@ jobs:
            "deployments/windows/installer.iss"
 
      # -----------------------------------
-     # VERIFY INSTALLER EXISTS
+     # VERIFY WINDOWS INSTALLER EXISTS
      # -----------------------------------
 
-     - name: Verify Installer
+     - name: Verify Windows Installer
        shell: powershell
        run: |
 
          if (!(Test-Path "HealthChecker-Setup.exe")) {
 
-             throw "Installer not generated"
+             throw "Windows installer not generated"
          }
 
          Write-Host ""
-         Write-Host "Installer generated successfully"
+         Write-Host "✓ Windows installer generated successfully"
 
      # -----------------------------------
-     # UPLOAD INSTALLER ARTIFACT
+     # UPLOAD WINDOWS INSTALLER ARTIFACT
      # -----------------------------------
 
-     - name: Upload Installer
+     - name: Upload Windows Installer
        uses: actions/upload-artifact@v4
        with:
-         name: HealthChecker-Installer-${{ github.sha }}
+         name: HealthChecker-Windows-Setup-${{ github.sha }}
          path: HealthChecker-Setup.exe
+
+ build-linux:
+
+   runs-on: ubuntu-latest
+
+   steps:
+
+     # -----------------------------------
+     # CHECKOUT CODE
+     # -----------------------------------
+
+     - name: Checkout Repository
+       uses: actions/checkout@v4
+
+     # -----------------------------------
+     # SETUP GO
+     # -----------------------------------
+
+     - name: Setup Go
+       uses: actions/setup-go@v5
+       with:
+         go-version: '1.24'
+
+     # -----------------------------------
+     # SETUP PWSH (for PowerShell on Linux)
+     # -----------------------------------
+
+     - name: Setup PowerShell
+       shell: bash
+       run: |
+
+         sudo apt-get update
+         sudo apt-get install -y powershell
+
+     # -----------------------------------
+     # BUILD LINUX APPLICATION
+     # -----------------------------------
+
+     - name: Build Linux Application
+       shell: pwsh
+       run: |
+
+         ./scripts/build.ps1 `
+           -UiVersion "${{ github.event.client_payload.ui_version }}" `
+           -TargetPlatform "linux"
+
+       env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+     # -----------------------------------
+     # VERIFY LINUX INSTALLER BUNDLE EXISTS
+     # -----------------------------------
+
+     - name: Verify Linux Installer Bundle
+       shell: pwsh
+       run: |
+
+         if (!(Test-Path "HealthChecker-Linux-Installer.tar.gz") -and !(Test-Path "HealthChecker-Linux-Installer.zip")) {
+
+             throw "Linux installer bundle not generated"
+         }
+
+         Write-Host ""
+         Write-Host "✓ Linux installer bundle generated successfully"
+
+     # -----------------------------------
+     # UPLOAD LINUX INSTALLER ARTIFACT
+     # -----------------------------------
+
+     - name: Upload Linux Installer Bundle
+       uses: actions/upload-artifact@v4
+       with:
+         name: HealthChecker-Linux-Installer-${{ github.sha }}
+         path: |
+           HealthChecker-Linux-Installer.tar.gz
+           HealthChecker-Linux-Installer.zip
+         if-no-files-found: warn
