@@ -251,6 +251,63 @@ The release workflow automatically builds both installers:
 
 Both jobs run in parallel, producing artifacts independently.
 
+### Automatic UI Tag Creation
+
+To remove manual tagging, configure both repositories as follows.
+
+1. Backend repository (`healthchecker-api`):
+    - Workflow added: `.github/workflows/auto-tag-ui-on-backend-push.yml`
+    - Trigger: push to `main`
+    - Action: creates a new tag in `HEMANTRAI233/healthchecker-ui` on the latest `main` commit.
+
+2. Required backend secret:
+    - `UI_REPO_PAT`: Personal Access Token with access to `HEMANTRAI233/healthchecker-ui`.
+    - Minimum classic PAT scope: `repo`.
+    - Recommended fine-grained PAT permissions: `Contents: Read and write` on `healthchecker-ui`.
+
+3. UI repository (`healthchecker-ui`):
+    - Add a workflow that auto-tags on push to `main`.
+    - This ensures UI-only pushes also create tags and trigger the existing release chain.
+
+Reference workflow for `healthchecker-ui`:
+
+```yaml
+name: Auto Tag On UI Push
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  create-tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Create tag from latest UI commit
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const branch = (context.ref || '').replace('refs/heads/', '').replace(/\//g, '-');
+            const shortSha = (context.sha || '').slice(0, 7);
+            const tagName = `auto-ui-${branch}-${shortSha}-${context.runId}`;
+
+            await github.rest.git.createRef({
+              owner,
+              repo,
+              ref: `refs/tags/${tagName}`,
+              sha: context.sha,
+            });
+
+            core.info(`Created tag ${tagName}`);
+```
+
 ---
 
 ## Quick Start Examples

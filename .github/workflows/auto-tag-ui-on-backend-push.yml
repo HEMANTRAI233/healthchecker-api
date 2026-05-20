@@ -1,0 +1,55 @@
+name: Auto Tag UI On Backend Push
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  create-ui-tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Validate UI token
+        env:
+          BACKEND_TRIGGER_TOKEN: ${{ secrets.BACKEND_TRIGGER_TOKEN }}
+        run: |
+          if [ -z "$BACKEND_TRIGGER_TOKEN" ]; then
+            echo "BACKEND_TRIGGER_TOKEN secret is required"
+            exit 1
+          fi
+
+      - name: Create tag in healthchecker-ui
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.BACKEND_TRIGGER_TOKEN }}
+          script: |
+            const owner = 'HEMANTRAI233';
+            const repo = 'healthchecker-ui';
+
+            // Always tag the latest commit on UI main branch.
+            const uiMainRef = await github.rest.git.getRef({
+              owner,
+              repo,
+              ref: 'heads/main',
+            });
+
+            const sourceRepo = context.repo.repo;
+            const sourceBranch = (context.ref || '').replace('refs/heads/', '').replace(/\//g, '-');
+            const sourceSha = (context.sha || '').slice(0, 7);
+            const runId = String(context.runId || Date.now());
+
+            const tagName = `auto-${sourceRepo}-${sourceBranch}-${sourceSha}-${runId}`;
+
+            await github.rest.git.createRef({
+              owner,
+              repo,
+              ref: `refs/tags/${tagName}`,
+              sha: uiMainRef.data.object.sha,
+            });
+
+            core.info(`Created tag ${tagName} in ${owner}/${repo}`);
+            core.info(`Tag SHA: ${uiMainRef.data.object.sha}`);
