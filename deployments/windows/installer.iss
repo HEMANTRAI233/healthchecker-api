@@ -24,6 +24,8 @@ Source: "ensure-iis.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 
 Source: "verify-iis.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 
+Source: "verify-migration.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+
 Source: "register-service.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 
 Source: "unregister-service.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
@@ -43,6 +45,8 @@ Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\configure-iis.ps1"""; Flags: runhidden waituntilterminated
 
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\verify-iis.ps1"""; Flags: runhidden waituntilterminated
+
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\verify-migration.ps1"""; Flags: runhidden waituntilterminated
 
 Filename: "http://localhost/Healthchecker/"; Description: "Open HealthChecker in browser"; Flags: postinstall skipifsilent shellexec
 
