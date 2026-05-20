@@ -21,15 +21,43 @@ if ($modules -notmatch "ARRv2_Proxy") {
 
 & $appCmd start site /site.name:"Default Web Site" | Out-Null
 
-# Remove previous rules if they already exist (ignore errors when absent).
-& $appCmd set config "Default Web Site" -section:system.webServer/rewrite/rules /-"[name='HealthcheckerProxy']" /commit:apphost 2>$null | Out-Null
-& $appCmd set config "Default Web Site" -section:system.webServer/rewrite/rules /-"[name='AssetsProxy']" /commit:apphost 2>$null | Out-Null
-& $appCmd set config "Default Web Site" -section:system.webServer/rewrite/rules /-"[name='ApiProxy']" /commit:apphost 2>$null | Out-Null
+$siteRoot = Join-Path $env:SystemDrive "inetpub\wwwroot"
 
-# Add site-level reverse proxy rules directly to applicationHost.config.
-& $appCmd set config "Default Web Site" -section:system.webServer/rewrite/rules /+"[name='HealthcheckerProxy',patternSyntax='ECMAScript',stopProcessing='True',match.url='^Healthchecker/?(.*)',action.type='Rewrite',action.url='http://127.0.0.1:8080/{R:1}',action.appendQueryString='True']" /commit:apphost | Out-Null
-& $appCmd set config "Default Web Site" -section:system.webServer/rewrite/rules /+"[name='AssetsProxy',patternSyntax='ECMAScript',stopProcessing='True',match.url='^assets/(.*)',action.type='Rewrite',action.url='http://127.0.0.1:8080/assets/{R:1}',action.appendQueryString='True']" /commit:apphost | Out-Null
-& $appCmd set config "Default Web Site" -section:system.webServer/rewrite/rules /+"[name='ApiProxy',patternSyntax='ECMAScript',stopProcessing='True',match.url='^api/(.*)',action.type='Rewrite',action.url='http://127.0.0.1:8080/api/{R:1}',action.appendQueryString='True']" /commit:apphost | Out-Null
+if (-not (Test-Path $siteRoot)) {
+        throw "IIS site root not found at: $siteRoot"
+}
+
+$rootWebConfigPath = Join-Path $siteRoot "web.config"
+
+$rootWebConfig = @'
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+    <system.webServer>
+        <rewrite>
+            <rules>
+                <rule name="HealthcheckerProxyRoot" stopProcessing="true">
+                    <match url="^Healthchecker/?$" />
+                    <action type="Rewrite" url="http://127.0.0.1:8080/" appendQueryString="true" />
+                </rule>
+                <rule name="HealthcheckerProxySubPath" stopProcessing="true">
+                    <match url="^Healthchecker/(.*)" />
+                    <action type="Rewrite" url="http://127.0.0.1:8080/{R:1}" appendQueryString="true" />
+                </rule>
+                <rule name="AssetsProxy" stopProcessing="true">
+                    <match url="^assets/(.*)" />
+                    <action type="Rewrite" url="http://127.0.0.1:8080/assets/{R:1}" appendQueryString="true" />
+                </rule>
+                <rule name="ApiProxy" stopProcessing="true">
+                    <match url="^api/(.*)" />
+                    <action type="Rewrite" url="http://127.0.0.1:8080/api/{R:1}" appendQueryString="true" />
+                </rule>
+            </rules>
+        </rewrite>
+    </system.webServer>
+</configuration>
+'@
+
+Set-Content -Path $rootWebConfigPath -Value $rootWebConfig -Encoding UTF8
 
 Write-Host "IIS applications configured:" 
 Write-Host "  http://localhost/Healthchecker"
