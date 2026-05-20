@@ -12,15 +12,48 @@ if (-not (Test-Path $appCmd)) {
     throw "IIS appcmd not found. Ensure IIS is installed before running setup."
 }
 
-$modules = & $appCmd list modules /text:name
-
-if ($modules -notmatch "RewriteModule") {
-    throw "IIS URL Rewrite module is required but not installed. Install URL Rewrite 2.x and rerun setup."
+function Get-IISModules {
+    return & $appCmd list modules /text:name
 }
 
-if ($modules -notmatch "ARRv2_Proxy") {
-    throw "IIS Application Request Routing (ARR) is required but not installed. Install ARR and rerun setup."
+function Ensure-Chocolatey {
+    $choco = Get-Command choco -ErrorAction SilentlyContinue
+
+    if ($null -ne $choco) {
+        return
+    }
+
+    Set-ExecutionPolicy Bypass -Scope Process -Force
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+    Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 }
+
+function Ensure-RewriteAndArr {
+    $modules = Get-IISModules
+    $hasRewrite = $modules -match "RewriteModule"
+    $hasArr = $modules -match "ARRv2_Proxy"
+
+    if ($hasRewrite -and $hasArr) {
+        return
+    }
+
+    Write-Host "Installing missing IIS proxy dependencies..."
+
+    Ensure-Chocolatey
+    choco install urlrewrite -y --no-progress
+    choco install iis-arr -y --no-progress
+    iisreset /restart | Out-Null
+
+    $modules = Get-IISModules
+    $hasRewrite = $modules -match "RewriteModule"
+    $hasArr = $modules -match "ARRv2_Proxy"
+
+    if (-not $hasRewrite -or -not $hasArr) {
+        throw "IIS URL Rewrite/ARR installation failed. Install URL Rewrite 2.x and ARR manually, then rerun setup."
+    }
+}
+
+Ensure-RewriteAndArr
 
 & $appCmd set config -section:system.webServer/proxy /enabled:"True" /preserveHostHeader:"True" /commit:apphost | Out-Null
 
