@@ -15,20 +15,19 @@ if (-not (Test-Path $appCmd)) {
     throw "IIS appcmd not found. Ensure IIS is installed before running setup."
 }
 
-function Get-IISModules {
-    return & $appCmd list modules /text:name
+function Can-EnableIISProxy {
+    try {
+        & $appCmd set config -section:system.webServer/proxy /enabled:"True" /preserveHostHeader:"True" /commit:apphost | Out-Null
+        return $true
+    }
+    catch {
+        Write-Host "Proxy section not available yet: $($_.Exception.Message)"
+        return $false
+    }
 }
 
-function Test-RewriteAndArrPresence {
-    $modules = Get-IISModules
-    $hasRewrite = $modules -match "RewriteModule"
-    $hasArr = $modules -match "ARRv2_Proxy"
-
-    return @{
-        HasRewrite = $hasRewrite
-        HasArr = $hasArr
-        Modules = $modules
-    }
+function Get-IISModules {
+    return & $appCmd list modules /text:name
 }
 
 function Ensure-Chocolatey {
@@ -59,13 +58,10 @@ function Install-MsiPackage {
 }
 
 function Ensure-RewriteAndArr {
-    $state = Test-RewriteAndArrPresence
-    $hasRewrite = $state.HasRewrite
-    $hasArr = $state.HasArr
+    $canEnableProxy = Can-EnableIISProxy
+    Write-Host "Initial ARR capability check: CanEnableProxy=$canEnableProxy"
 
-    Write-Host "Initial module detection: RewriteModule=$hasRewrite ARRv2_Proxy=$hasArr"
-
-    if ($hasRewrite -and $hasArr) {
+    if ($canEnableProxy) {
         return
     }
 
@@ -106,13 +102,10 @@ function Ensure-RewriteAndArr {
 
     iisreset /restart | Out-Null
 
-    $state = Test-RewriteAndArrPresence
-    $hasRewrite = $state.HasRewrite
-    $hasArr = $state.HasArr
+    $canEnableProxy = Can-EnableIISProxy
+    Write-Host "Post-install ARR capability check: CanEnableProxy=$canEnableProxy"
 
-    Write-Host "Post-install module detection: RewriteModule=$hasRewrite ARRv2_Proxy=$hasArr"
-
-    if (-not $hasRewrite -or -not $hasArr) {
+    if (-not $canEnableProxy) {
         Write-Host "Forcing package reinstallation to repair IIS module registration..."
 
         try {
@@ -126,17 +119,15 @@ function Ensure-RewriteAndArr {
 
         iisreset /restart | Out-Null
 
-        $state = Test-RewriteAndArrPresence
-        $hasRewrite = $state.HasRewrite
-        $hasArr = $state.HasArr
-
-        Write-Host "Post-repair module detection: RewriteModule=$hasRewrite ARRv2_Proxy=$hasArr"
+        $canEnableProxy = Can-EnableIISProxy
+        Write-Host "Post-repair ARR capability check: CanEnableProxy=$canEnableProxy"
     }
 
-    if (-not $hasRewrite -or -not $hasArr) {
+    if (-not $canEnableProxy) {
+        $modules = Get-IISModules
         Write-Host "IIS modules visible to appcmd:"
-        Write-Host $state.Modules
-        throw "IIS URL Rewrite/ARR installation failed or modules are not registered in IIS. Manually reinstall URL Rewrite and ARR, run iisreset, then rerun setup."
+        Write-Host $modules
+        throw "IIS ARR proxy section is not available after installation/repair. Manually reinstall URL Rewrite and ARR, run iisreset, then rerun setup."
     }
 }
 
