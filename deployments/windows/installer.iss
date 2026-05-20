@@ -11,6 +11,10 @@ OutputBaseFilename=HealthChecker-Setup
 Compression=lzma
 SolidCompression=yes
 
+[Dirs]
+
+Name: "{sd}\inetpub\wwwroot\Healthchecker"
+
 [Files]
 
 Source: "..\..\build\HealthChecker.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -20,6 +24,10 @@ Source: "..\..\build\config\app.env"; DestDir: "{app}\config"; Flags: ignorevers
 Source: "configure-iis.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 
 Source: "verify-iis.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+
+Source: "wwwroot.web.config"; DestDir: "{sd}\inetpub\wwwroot"; DestName: "web.config"; Flags: ignoreversion
+
+Source: "healthchecker-folder.web.config"; DestDir: "{sd}\inetpub\wwwroot\Healthchecker"; DestName: "web.config"; Flags: ignoreversion
 
 Source: "register-service.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 
