@@ -1,6 +1,11 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$logDir = Join-Path $env:ProgramData "HealthChecker"
+New-Item -Path $logDir -ItemType Directory -Force | Out-Null
+$logPath = Join-Path $logDir "configure-iis.log"
+Start-Transcript -Path $logPath -Append | Out-Null
+
 $appCmd = Join-Path $env:WinDir "System32\inetsrv\appcmd.exe"
 
 if (-not (Test-Path $appCmd)) {
@@ -26,6 +31,32 @@ $siteRoot = Join-Path $env:SystemDrive "inetpub\wwwroot"
 if (-not (Test-Path $siteRoot)) {
         throw "IIS site root not found at: $siteRoot"
 }
+
+$healthcheckerDir = Join-Path $siteRoot "Healthchecker"
+New-Item -Path $healthcheckerDir -ItemType Directory -Force | Out-Null
+
+$healthcheckerFolderWebConfigPath = Join-Path $healthcheckerDir "web.config"
+$healthcheckerFolderWebConfig = @'
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+    <system.webServer>
+        <rewrite>
+            <rules>
+                <rule name="HealthcheckerFolderProxyRoot" stopProcessing="true">
+                    <match url="^$" />
+                    <action type="Rewrite" url="http://127.0.0.1:8080/" appendQueryString="true" />
+                </rule>
+                <rule name="HealthcheckerFolderProxySubPath" stopProcessing="true">
+                    <match url="(.*)" />
+                    <action type="Rewrite" url="http://127.0.0.1:8080/{R:1}" appendQueryString="true" />
+                </rule>
+            </rules>
+        </rewrite>
+    </system.webServer>
+</configuration>
+'@
+
+Set-Content -Path $healthcheckerFolderWebConfigPath -Value $healthcheckerFolderWebConfig -Encoding UTF8
 
 $rootWebConfigPath = Join-Path $siteRoot "web.config"
 
@@ -59,5 +90,11 @@ $rootWebConfig = @'
 
 Set-Content -Path $rootWebConfigPath -Value $rootWebConfig -Encoding UTF8
 
+$markerPath = Join-Path $healthcheckerDir "healthchecker-iis-configured.txt"
+Set-Content -Path $markerPath -Value "configured on $(Get-Date -Format o)" -Encoding UTF8
+
 Write-Host "IIS applications configured:" 
 Write-Host "  http://localhost/Healthchecker"
+Write-Host "IIS setup log: $logPath"
+
+Stop-Transcript | Out-Null
