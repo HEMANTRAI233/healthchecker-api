@@ -5,8 +5,8 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/healthchecker
-ExecStart=/opt/healthchecker/HealthChecker
+WorkingDirectory=/opt/healthchecker/current
+ExecStart=/opt/healthchecker/current/HealthChecker
 Restart=on-failure
 RestartSec=5
 EnvironmentFile=-/etc/healthchecker/app.env
