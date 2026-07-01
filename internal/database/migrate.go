@@ -15,8 +15,8 @@ import (
 )
 
 // validateMigrationParity checks that every *.up.sql file in the migrations
-// directory has a corresponding *.down.sql file.  This enforces rule 1: every
-// migration must ship with a rollback script.
+// directory has a corresponding *.down.sql file, ensuring every migration
+// ships with a rollback script.
 func validateMigrationParity() error {
 	entries, err := fs.ReadDir(MigrationFiles, "migrations")
 	if err != nil {
@@ -56,14 +56,16 @@ func validateMigrationParity() error {
 
 // RunMigrations applies all pending database migrations.
 //
-// Safety rules applied here:
+// Behaviour:
 //  1. All migration files are validated for up/down parity before any SQL runs.
 //  2. If a migration fails and its version is classified as Reversible in the
 //     metadata registry, the runner automatically rolls back that one step via
 //     the down script so the database is left in a clean state.
 //  3. If a migration fails and its version is classified as NonReversible (or
-//     has no registry entry), no automatic rollback is attempted; the dirty flag
-//     will remain in schema_migrations and manual intervention is required.
+//     has no registry entry), no automatic rollback is attempted.  The
+//     golang-migrate internal tracking table (schema_migrations) will retain a
+//     dirty=true record for the failed version, signalling that manual
+//     intervention is required before migrations can proceed again.
 func RunMigrations() error {
 	if err := validateMigrationParity(); err != nil {
 		return err

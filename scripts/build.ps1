@@ -209,6 +209,11 @@ if ($TargetPlatform -eq "linux" -or $TargetPlatform -eq "both") {
       -Force
 
    Copy-Item `
+      "deployments/linux/rollback.sh" `
+      (Join-Path $linuxInstallerAppRoot "scripts/rollback.sh") `
+      -Force
+
+   Copy-Item `
       "deployments/linux/healthchecker.service" `
       (Join-Path $linuxInstallerAppRoot "systemd/healthchecker.service") `
       -Force
@@ -218,6 +223,7 @@ if ($TargetPlatform -eq "linux" -or $TargetPlatform -eq "both") {
       chmod +x (Join-Path $linuxInstallerAppRoot "bin/HealthChecker")
       chmod +x (Join-Path $linuxInstallerAppRoot "scripts/install.sh")
       chmod +x (Join-Path $linuxInstallerAppRoot "scripts/uninstall.sh")
+      chmod +x (Join-Path $linuxInstallerAppRoot "scripts/rollback.sh")
    }
 
    $linuxTarPath = "HealthChecker-Linux-Installer.tar.gz"
