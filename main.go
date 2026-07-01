@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/gin-contrib/static"
@@ -22,7 +23,54 @@ func serverAddress(port string) string {
 	return "127.0.0.1:" + port
 }
 
+// handleRollbackSchema is invoked when the binary is called with
+// --rollback-schema <version>.  It rolls the database schema back to the
+// given version and exits.
+//
+// install.sh calls this on the NEW binary during auto-rollback to undo any
+// migrations that ran before the crash, restoring the schema to the state the
+// previous binary expects.  Passing -1 rolls back all migrations.
+func handleRollbackSchema(args []string) {
+	if len(args) < 1 {
+		fmt.Fprintln(os.Stderr, "usage: HealthChecker --rollback-schema <version>")
+		fmt.Fprintln(os.Stderr, "  version: target schema version (integer), or -1 to roll back all migrations")
+		os.Exit(1)
+	}
+
+	targetVersion, err := strconv.ParseInt(args[0], 10, 64)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "rollback-schema: invalid version %q: %v\n", args[0], err)
+		os.Exit(1)
+	}
+
+	config.LoadEnv()
+	config.LoadConfig()
+
+	if err := database.ConnectPostgres(); err != nil {
+		fmt.Fprintf(os.Stderr, "rollback-schema: database connection failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := database.RollbackSchemaToVersion(targetVersion); err != nil {
+		fmt.Fprintf(os.Stderr, "rollback-schema: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Schema rolled back to version %d successfully.\n", targetVersion)
+	os.Exit(0)
+}
+
 func main() {
+	// ========================================
+	// SCHEMA ROLLBACK MODE
+	// ========================================
+	// When invoked with --rollback-schema <version>, perform a DB schema
+	// rollback and exit.  install.sh uses this during auto-rollback to prevent
+	// schema drift after a crash-after-migrations scenario.
+	if len(os.Args) >= 2 && os.Args[1] == "--rollback-schema" {
+		handleRollbackSchema(os.Args[2:])
+		return
+	}
 
 	// ========================================
 	// LOG FILE SETUP
