@@ -15,6 +15,9 @@ CURRENT_LINK="${BASE_DIR}/current"
 CONFIG_DIR="/etc/healthchecker"
 SERVICE_NAME="healthchecker.service"
 KEEP_RELEASES=3
+# File written by RunMigrations() recording the schema version before upgrade.
+# Used during auto-rollback to restore the DB schema to the pre-upgrade state.
+readonly PRE_UPGRADE_VERSION_FILE="${BASE_DIR}/.pre_upgrade_schema_version"
 
 # ---------------------------------------------------------------------------
 # Determine the version being installed.
@@ -106,7 +109,6 @@ if ! systemctl is-active --quiet "${SERVICE_NAME}"; then
   # that version back to the new binary via --rollback-schema so its
   # embedded down scripts undo the schema changes in the correct order.
   # -----------------------------------------------------------------
-  PRE_UPGRADE_VERSION_FILE="${BASE_DIR}/.pre_upgrade_schema_version"
   if [[ -f "${PRE_UPGRADE_VERSION_FILE}" ]]; then
     PRE_UPGRADE_VERSION="$(tr -d '[:space:]' < "${PRE_UPGRADE_VERSION_FILE}")"
     echo "Rolling back DB schema to pre-upgrade version: ${PRE_UPGRADE_VERSION}" >&2
@@ -145,7 +147,6 @@ echo "Service is running."
 # Clean up the pre-upgrade schema version file now that the new binary is
 # confirmed healthy.  It was only needed for potential rollback.
 # ---------------------------------------------------------------------------
-PRE_UPGRADE_VERSION_FILE="${BASE_DIR}/.pre_upgrade_schema_version"
 if [[ -f "${PRE_UPGRADE_VERSION_FILE}" ]]; then
   rm -f "${PRE_UPGRADE_VERSION_FILE}"
 fi

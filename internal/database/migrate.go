@@ -101,6 +101,9 @@ func RollbackSchemaToVersion(targetVersion int64) error {
 		log.Printf("schema rollback: rolling back all migrations (pre-upgrade schema was empty)")
 		err = m.Down()
 	} else {
+		if targetVersion < 0 {
+			return fmt.Errorf("schema rollback: invalid negative target version %d (only -1 is allowed as the nil-version sentinel)", targetVersion)
+		}
 		log.Printf("schema rollback: rolling back to version %d", targetVersion)
 		err = m.Migrate(uint(targetVersion))
 	}
@@ -194,10 +197,16 @@ func RunMigrations() error {
 	// install.sh can restore the schema if the new binary crashes after a
 	// successful migration run (schema drift prevention).
 	preUpgradeVersion, _, vErr := m.Version()
-	if vErr == migrate.ErrNilVersion {
+	switch {
+	case vErr == migrate.ErrNilVersion:
 		savePreUpgradeVersion(nilVersionSentinel)
-	} else if vErr == nil {
+	case vErr == nil:
 		savePreUpgradeVersion(int64(preUpgradeVersion))
+	default:
+		// An unexpected error reading the current version means we cannot
+		// reliably save the pre-upgrade version.  Log and abort before any
+		// migrations run so the database is left in a clean, known state.
+		return fmt.Errorf("reading current schema version before migration: %w", vErr)
 	}
 
 	err = m.Up()
