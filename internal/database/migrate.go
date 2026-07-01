@@ -61,11 +61,17 @@ func validateMigrationParity() error {
 //  2. If a migration fails and its version is classified as Reversible in the
 //     metadata registry, the runner automatically rolls back that one step via
 //     the down script so the database is left in a clean state.
-//  3. If a migration fails and its version is classified as NonReversible (or
-//     has no registry entry), no automatic rollback is attempted.  The
-//     golang-migrate internal tracking table (schema_migrations) will retain a
-//     dirty=true record for the failed version, signalling that manual
-//     intervention is required before migrations can proceed again.
+//  3. If a migration fails and its version is classified as NonReversible, a
+//     protective automatic rollback is still attempted via the down script.
+//     Because the up script did not complete, no data has been permanently
+//     transformed, so the rollback restores the database to its prior clean
+//     state with no data loss.  The error returned clearly indicates that the
+//     migration is non-reversible and that data integrity should be verified.
+//  4. If a migration fails and has no registry entry, no automatic rollback is
+//     attempted.  The golang-migrate internal tracking table
+//     (schema_migrations) will retain a dirty=true record for the failed
+//     version, signalling that manual intervention is required before
+//     migrations can proceed again.
 func RunMigrations() error {
 	if err := validateMigrationParity(); err != nil {
 		return err
@@ -114,12 +120,29 @@ func RunMigrations() error {
 	}
 
 	if meta.Reversibility == NonReversible {
+		// Although this migration is marked NonReversible, its up script did not
+		// complete successfully, meaning no destructive or irreversible data
+		// transformation has been committed.  A protective rollback via the down
+		// script is therefore safe and returns the database to its prior clean
+		// state with no data loss.
 		log.Printf(
-			"migration %d (%s) failed and is marked NonReversible -- manual intervention required: %v",
+			"migration %d (%s) failed and is marked NonReversible -- attempting protective rollback to prevent dirty state: %v",
 			version, meta.Description, err,
 		)
+
+		if rollbackErr := m.Steps(-1); rollbackErr != nil {
+			return fmt.Errorf(
+				"migration %d (%s) failed (non-reversible) and protective rollback also failed (manual fix required): original=%w, rollback=%v",
+				version, meta.Description, err, rollbackErr,
+			)
+		}
+
+		log.Printf(
+			"migration %d (%s) protective rollback completed; database restored to clean state (non-reversible migration -- verify data integrity)",
+			version, meta.Description,
+		)
 		return fmt.Errorf(
-			"migration %d (%s) failed and is non-reversible (manual fix required): %w",
+			"migration %d (%s) failed and was rolled back (non-reversible: verify data integrity): %w",
 			version, meta.Description, err,
 		)
 	}
