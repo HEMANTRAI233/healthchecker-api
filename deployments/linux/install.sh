@@ -15,6 +15,9 @@ CURRENT_LINK="${BASE_DIR}/current"
 CONFIG_DIR="/etc/healthchecker"
 SERVICE_NAME="healthchecker.service"
 KEEP_RELEASES=3
+# File written by RunMigrations() recording the schema version before upgrade.
+# Used during auto-rollback to restore the DB schema to the pre-upgrade state.
+readonly PRE_UPGRADE_VERSION_FILE="${BASE_DIR}/.pre_upgrade_schema_version"
 
 # ---------------------------------------------------------------------------
 # Determine the version being installed.
@@ -97,6 +100,32 @@ if ! systemctl is-active --quiet "${SERVICE_NAME}"; then
   echo "ERROR: Service failed to start after ${STARTUP_TIMEOUT}s." >&2
 
   # -----------------------------------------------------------------
+  # Schema rollback: if the new binary ran migrations before crashing,
+  # restore the database schema to the pre-upgrade version so that
+  # the previous binary can resume without schema drift.
+  #
+  # RunMigrations() writes the pre-upgrade schema version to
+  # PreUpgradeVersionFile before applying any migrations.  We pass
+  # that version back to the new binary via --rollback-schema so its
+  # embedded down scripts undo the schema changes in the correct order.
+  # -----------------------------------------------------------------
+  if [[ -f "${PRE_UPGRADE_VERSION_FILE}" ]]; then
+    PRE_UPGRADE_VERSION="$(tr -d '[:space:]' < "${PRE_UPGRADE_VERSION_FILE}")"
+    echo "Rolling back DB schema to pre-upgrade version: ${PRE_UPGRADE_VERSION}" >&2
+    if "${RELEASE_DIR}/HealthChecker" --rollback-schema "${PRE_UPGRADE_VERSION}"; then
+      echo "DB schema rollback succeeded." >&2
+    else
+      echo "WARNING: DB schema rollback failed -- manual intervention may be required to prevent schema drift." >&2
+      echo "  Run: ${RELEASE_DIR}/HealthChecker --rollback-schema ${PRE_UPGRADE_VERSION}" >&2
+    fi
+    rm -f "${PRE_UPGRADE_VERSION_FILE}"
+  else
+    echo "WARNING: Pre-upgrade schema version file not found at ${PRE_UPGRADE_VERSION_FILE}." >&2
+    echo "  If migrations ran before the crash, the DB schema may have drifted." >&2
+    echo "  Verify with: journalctl -u ${SERVICE_NAME} -n 100" >&2
+  fi
+
+  # -----------------------------------------------------------------
   # Auto-rollback: restore the previous release if one exists
   # -----------------------------------------------------------------
   if [[ -n "${PREVIOUS_RELEASE}" && -d "${PREVIOUS_RELEASE}" ]]; then
@@ -113,6 +142,14 @@ if ! systemctl is-active --quiet "${SERVICE_NAME}"; then
 fi
 
 echo "Service is running."
+
+# ---------------------------------------------------------------------------
+# Clean up the pre-upgrade schema version file now that the new binary is
+# confirmed healthy.  It was only needed for potential rollback.
+# ---------------------------------------------------------------------------
+if [[ -f "${PRE_UPGRADE_VERSION_FILE}" ]]; then
+  rm -f "${PRE_UPGRADE_VERSION_FILE}"
+fi
 
 # ---------------------------------------------------------------------------
 # Prune old releases -- keep only the most recent KEEP_RELEASES
