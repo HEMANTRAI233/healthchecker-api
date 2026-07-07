@@ -27,9 +27,10 @@ func serverAddress(port string) string {
 // --rollback-schema <version>.  It rolls the database schema back to the
 // given version and exits.
 //
-// install.sh calls this on the NEW binary during auto-rollback to undo any
-// migrations that ran before the crash, restoring the schema to the state the
-// previous binary expects.  Passing -1 rolls back all migrations.
+// install.sh (Linux) and register-service.ps1 (Windows) call this on the NEW
+// binary during auto-rollback to undo any migrations that ran before the crash,
+// restoring the schema to the state the previous binary expects.  Passing -1
+// rolls back all migrations.
 func handleRollbackSchema(args []string) {
 	if len(args) < 1 {
 		fmt.Fprintln(os.Stderr, "usage: HealthChecker --rollback-schema <version>")
@@ -65,8 +66,9 @@ func main() {
 	// SCHEMA ROLLBACK MODE
 	// ========================================
 	// When invoked with --rollback-schema <version>, perform a DB schema
-	// rollback and exit.  install.sh uses this during auto-rollback to prevent
-	// schema drift after a crash-after-migrations scenario.
+	// rollback and exit.  install.sh (Linux) and register-service.ps1 (Windows)
+	// use this during auto-rollback to prevent schema drift after a
+	// crash-after-migrations scenario.
 	if len(os.Args) >= 2 && os.Args[1] == "--rollback-schema" {
 		handleRollbackSchema(os.Args[2:])
 		return

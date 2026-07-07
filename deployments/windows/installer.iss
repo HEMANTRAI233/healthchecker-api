@@ -53,3 +53,24 @@ Filename: "http://localhost/Healthchecker/"; Description: "Open HealthChecker in
 [UninstallRun]
 
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\unregister-service.ps1"""; Flags: runhidden waituntilterminated
+
+[Code]
+// Back up the existing binary before the installer overwrites it so that
+// register-service.ps1 can restore it (binary rollback) if the new binary
+// fails to start after a migration-then-crash scenario.
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  OldExePath, BackupExePath: String;
+begin
+  if CurStep = ssInstFiles then
+  begin
+    OldExePath := ExpandConstant('{app}\HealthChecker.exe');
+    BackupExePath := ExpandConstant('{app}\HealthChecker.exe.previous');
+    if FileExists(OldExePath) then
+    begin
+      if not FileCopy(OldExePath, BackupExePath, False) then
+        Log('WARNING: Could not back up ' + OldExePath + ' to ' + BackupExePath +
+            ' -- binary rollback will not be available if the upgrade fails.');
+    end;
+  end;
+end;

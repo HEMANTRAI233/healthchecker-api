@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,11 +21,17 @@ import (
 // PreUpgradeVersionFile is the path where RunMigrations writes the schema
 // version that was active before it applied any new migrations.
 //
-// install.sh reads this file when the new binary crashes after a successful
-// migration run.  It passes the saved version to the new binary via
-// --rollback-schema so the DB schema is restored to the pre-upgrade state
-// before the old binary is resumed, preventing schema drift.
-const PreUpgradeVersionFile = "/opt/healthchecker/.pre_upgrade_schema_version"
+// On Linux, install.sh reads this file when the new binary crashes after a
+// successful migration run.  On Windows, register-service.ps1 reads it.
+// Both pass the saved version to the binary via --rollback-schema so the DB
+// schema is restored to the pre-upgrade state before the old binary is
+// resumed, preventing schema drift.
+var PreUpgradeVersionFile = func() string {
+	if runtime.GOOS == "windows" {
+		return `C:\ProgramData\HealthChecker\.pre_upgrade_schema_version`
+	}
+	return "/opt/healthchecker/.pre_upgrade_schema_version"
+}()
 
 // nilVersionSentinel is written to PreUpgradeVersionFile when no migrations
 // had been applied before the upgrade (golang-migrate ErrNilVersion).  The
@@ -87,7 +94,8 @@ func GetCurrentVersion() (int64, error) {
 // reaches that version.
 //
 // This function is invoked by the --rollback-schema CLI flag, which is called
-// by install.sh during its binary auto-rollback to prevent schema drift:
+// by install.sh (Linux) and register-service.ps1 (Windows) during auto-rollback
+// to prevent schema drift:
 //
 // ${new_binary} --rollback-schema ${pre_upgrade_version}
 func RollbackSchemaToVersion(targetVersion int64) error {
@@ -162,9 +170,10 @@ func validateMigrationParity() error {
 //  2. The expand-and-contract phase rules are validated: every Expand-phase
 //     migration must be Reversible (see validateExpandContractPhases).
 //  3. The current schema version is persisted to PreUpgradeVersionFile before
-//     any migrations run.  install.sh reads this file when rolling back the
-//     binary after a crash-after-migration, allowing it to restore the DB
-//     schema to the pre-upgrade state via --rollback-schema.
+//     any migrations run.  On Linux install.sh, and on Windows
+//     register-service.ps1, read this file when rolling back the binary after
+//     a crash-after-migration, allowing them to restore the DB schema to the
+//     pre-upgrade state via --rollback-schema.
 //  4. If a migration fails and its version is classified as Reversible in the
 //     metadata registry, the runner automatically rolls back that one step via
 //     the down script so the database is left in a clean state.
