@@ -116,6 +116,17 @@ var migrationRegistry = map[uint]*MigrationMeta{
 		Reversibility: Reversible,
 		Phase:         Expand,
 	},
+
+	// 003 - adds password_hash column and unique constraint on username in
+	// application_users to support bcrypt-based authentication.  The down
+	// script drops the constraint and column; rolling back is safe because the
+	// previous application version did not use password_hash.
+	3: {
+		Version:       3,
+		Description:   "add_user_auth",
+		Reversibility: Reversible,
+		Phase:         Expand,
+	},
 }
 
 // GetMigrationMeta returns the metadata for the given migration version.

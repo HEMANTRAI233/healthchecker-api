@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"healthchecker-api/internal/auth"
 	"healthchecker-api/internal/config"
 	"healthchecker-api/internal/database"
 	"healthchecker-api/internal/routes"
@@ -162,6 +163,14 @@ func main() {
 	}
 
 	log.Println("MIGRATIONS APPLIED")
+
+	// ========================================
+	// SEED SUPERADMIN USER
+	// ========================================
+
+	auth.SeedSuperAdmin()
+
+	log.Println("AUTH SEED COMPLETE")
 
 	// ========================================
 	// CREATE GIN ROUTER

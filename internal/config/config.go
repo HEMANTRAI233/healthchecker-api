@@ -14,6 +14,7 @@ type Config struct {
 	DBPassword string
 	DBName     string
 	DBSSLMode  string
+	JWTSecret  string
 }
 
 var AppConfig Config
@@ -110,6 +111,11 @@ func LoadConfig() {
 		DBSSLMode: GetEnv(
 			"DB_SSLMODE",
 			"disable",
+		),
+
+		JWTSecret: GetEnv(
+			"JWT_SECRET",
+			"change-me-in-production",
 		),
 	}
 }
