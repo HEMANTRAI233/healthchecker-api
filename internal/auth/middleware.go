@@ -10,8 +10,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// RequireAuth is a Gin middleware that validates the ****** in the
-// Authorization header.  Requests without a valid token receive 401.
+// RequireAuth is a Gin middleware that validates the JWT bearer credential in the
+// Authorization header.  Requests without a valid bearer credential receive 401.
 func RequireAuth(c *gin.Context) {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {

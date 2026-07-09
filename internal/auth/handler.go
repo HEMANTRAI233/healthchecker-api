@@ -25,6 +25,9 @@ type loginResponse struct {
 // Login handles POST /api/auth/login.
 // It looks up the user by username, verifies the password against the stored
 // bcrypt hash, and returns a signed JWT on success.
+// When the username is not found a dummy bcrypt comparison is performed so
+// that both the "no such user" and "wrong password" code paths take roughly
+// the same amount of time, preventing username enumeration via response timing.
 func Login(c *gin.Context) {
 	var req loginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -41,6 +44,9 @@ func Login(c *gin.Context) {
 	).Scan(&userID, &storedHash)
 
 	if err != nil {
+		// Perform a dummy bcrypt comparison to make the timing indistinguishable
+		// from a real password check, preventing username enumeration.
+		_ = bcrypt.CompareHashAndPassword([]byte(SuperAdminPasswordHash), []byte(req.Password))
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid username or password"})
 		return
 	}

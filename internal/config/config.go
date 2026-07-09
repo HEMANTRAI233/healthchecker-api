@@ -118,6 +118,11 @@ func LoadConfig() {
 			"change-me-in-production",
 		),
 	}
+
+	if AppConfig.JWTSecret == "change-me-in-production" {
+		log.Println("WARNING: JWT_SECRET is set to the insecure default value. " +
+			"Set the JWT_SECRET environment variable to a strong random secret before deploying to production.")
+	}
 }
 
 // ========================================
